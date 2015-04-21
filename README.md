@@ -1,30 +1,32 @@
-GET /movies
-- Returns all movies. Movies have Title, Genre, Release Year, Description, Cast.
-GET /movies/:id
-- Returns specified movie.
-GET /movies/:id/cast
-- Returns a short list of the primary cast members.
-PUT /movies
-- Creates/updates a new movie.
-DELETE /movies/:id
-- Removes a movie by id
-GET /genres
-- Returns all genres. Genres have Name.
-GET /genres/:id
-- Returns specified genre.
-GET /genres/:id/movies
-- Returns all movies in this Genre.
-PUT /genres
-- Creates/updates a genre
-DELETE /genre/:id
-- Removes a genre by id
-GET /actors
-- Returns a list of actors
-GET /actors/:id
-- Returns a specific actor.
-GET /actors/:id/movies
-- Returns a list of movies this actor has been in.
-PUT /actors
-- Creates/updates an actor.
-DELETE /actors/:id
-- Removes an actor by id
+Implementation of the following API for Indy Golang
+
+* GET /movies
+  * Returns all movies. Movies have Title, Genre, Release Year, Description, Cast.
+* POST /movies
+  * Creates a new movie.
+* GET /movies/:id
+  * Returns specified movie.
+* PUT /movies/:id
+  * Create/update a movie with the given ID.
+* DELETE /movies/:id
+  * Removes a movie by ID.
+* GET /genres
+  * Returns all genres. Genres have Name.
+* POST /genres
+  * Creates a new genre.
+* GET /genres/:id
+  * Returns specified genre.
+* PUT /genres/:id
+  * Creates/updates a genre with the given ID.
+* DELETE /genre/:id
+  * Removes a genre by id
+* GET /actors
+  * Returns a list of actors
+* POST /actors
+  * Creates an actor.
+* GET /actors/:id
+  * Returns a specific actor.
+* POST /actors/:id
+  * Creates/updates an actor with the given ID.
+* DELETE /actors/:id
+  * Removes an actor by id
