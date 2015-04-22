@@ -44,22 +44,22 @@ func (u MovieResource) Register(container *restful.Container) {
     Param(ws.PathParameter("movie-id", "identifier of the movie").DataType("string")).
     Writes(Movie{}))
 
-  // ws.Route(ws.PUT("/{movie-id}").To(u.update).
-  //   Doc("update a movie").
-  //   Operation("update").
-  //   Param(ws.PathParameter("movie-id", "identifier of the movie").DataType("string")).
-  //   Returns(409, "duplicate movie-id", nil).
-  //   Reads(Movie{}))
+  ws.Route(ws.PUT("/{movie-id}").To(u.update).
+    Doc("update a movie").
+    Operation("update").
+    Param(ws.PathParameter("movie-id", "identifier of the movie").DataType("string")).
+    Returns(409, "duplicate movie-id", nil).
+    Reads(Movie{}))
 
-  // ws.Route(ws.POST("").To(u.create).
-  //   Doc("create a movie").
-  //   Operation("create").
-  //   Reads(Movie{}))
+  ws.Route(ws.POST("/").To(u.create).
+    Doc("create a movie").
+    Operation("create").
+    Reads(Movie{}))
 
-  // ws.Route(ws.DELETE("/{movie-id}").To(u.remove).
-  //   Doc("delete a movie").
-  //   Operation("remove").
-  //   Param(ws.PathParameter("movie-id", "identifier of the movie").DataType("string")))
+  ws.Route(ws.DELETE("/{movie-id}").To(u.delete).
+    Doc("delete a movie").
+    Operation("delete").
+    Param(ws.PathParameter("movie-id", "identifier of the movie").DataType("string")))
 
   container.Add(ws)
 }
@@ -84,41 +84,58 @@ func (u MovieResource) findOne(request *restful.Request, response *restful.Respo
   response.WriteEntity(movie)
 }
 
-// // POST http://localhost:8080/movies
-// // <User><Name>Melissa</Name></User>
-// //
-// func (u *MovieResource) create(request *restful.Request, response *restful.Response) {
-//   usr := new(User)
-//   err := request.ReadEntity(usr)
-//   if err != nil {
-//     response.AddHeader("Content-Type", "text/plain")
-//     response.WriteErrorString(http.StatusInternalServerError, err.Error())
-//     return
-//   }
-//   usr.Id = strconv.Itoa(len(u.users) + 1) // simple id generation
-//   u.users[usr.Id] = *usr
-//   response.WriteHeader(http.StatusCreated)
-//   response.WriteEntity(usr)
-// }
+// POST http://localhost:8080/movies
+// <User><Name>Melissa</Name></User>
+//
+func (u *MovieResource) create(request *restful.Request, response *restful.Response) {
+  movie := new(Movie)
+  if err := request.ReadEntity(movie); err != nil {
+    response.AddHeader("Content-Type", "text/plain")
+    response.WriteErrorString(http.StatusInternalServerError, err.Error())
+    return
+  }
+  if !movie.ID.Valid() {
+    movie.ID = bson.NewObjectId()
+  }
+  if err := u.coll().Insert(movie); err != nil {
+    response.AddHeader("Content-Type", "text/plain")
+    response.WriteErrorString(http.StatusInternalServerError, err.Error())
+    return
+  }
 
-// // PUT http://localhost:8080/movies/1
-// // <User><Id>1</Id><Name>Melissa Raspberry</Name></User>
-// //
-// func (u *MovieResource) update(request *restful.Request, response *restful.Response) {
-//   usr := new(User)
-//   err := request.ReadEntity(&usr)
-//   if err != nil {
-//     response.AddHeader("Content-Type", "text/plain")
-//     response.WriteErrorString(http.StatusInternalServerError, err.Error())
-//     return
-//   }
-//   u.users[usr.Id] = *usr
-//   response.WriteEntity(usr)
-// }
+  response.WriteHeader(http.StatusCreated)
+  response.WriteEntity(movie)
+}
 
-// // DELETE http://localhost:8080/movies/1
-// //
-// func (u *MovieResource) remove(request *restful.Request, response *restful.Response) {
-//   id := request.PathParameter("movie-id")
-//   delete(u.users, id)
-// }
+// PUT http://localhost:8080/movies/1
+// <User><Id>1</Id><Name>Melissa Raspberry</Name></User>
+//
+func (u *MovieResource) update(request *restful.Request, response *restful.Response) {
+  movie := new(Movie)
+  if err := request.ReadEntity(movie); err != nil {
+    response.AddHeader("Content-Type", "text/plain")
+    response.WriteErrorString(http.StatusInternalServerError, err.Error())
+    return
+  }
+  if !movie.ID.Valid() {
+    movie.ID = bson.ObjectIdHex(request.PathParameter("movie-id"))
+  }
+  if _, err := u.coll().UpsertId(movie.ID, movie); err != nil {
+    response.AddHeader("Content-Type", "text/plain")
+    response.WriteErrorString(http.StatusInternalServerError, err.Error())
+    return
+  }
+
+  response.WriteHeader(http.StatusCreated)
+  response.WriteEntity(movie)
+}
+
+// DELETE http://localhost:8080/movies/1
+//
+func (u *MovieResource) delete(request *restful.Request, response *restful.Response) {
+  if err := u.coll().RemoveId(bson.ObjectIdHex(request.PathParameter("movie-id"))); err != nil {
+    response.AddHeader("Content-Type", "text/plain")
+    response.WriteErrorString(http.StatusInternalServerError, err.Error())
+    return
+  }
+}
