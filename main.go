@@ -1,35 +1,21 @@
 package main
 
 import (
-	"github.com/dougblack/sleepy"
-	"gopkg.in/mgo.v2"
-  "fmt"
+  "log"
+  "net/http"
+  "os"
+  "github.com/emicklei/go-restful"
 )
 
 func main() {
-	populateMovies()
-	movie := new(Movie)
+  // to see what happens in the package, uncomment the following
+  restful.TraceLogger(log.New(os.Stdout, "[restful] ", log.LstdFlags|log.Lshortfile))
 
-	api := sleepy.NewAPI()
-	api.AddResource(movie, "/movies")
-	fmt.Println(api.Start(3000))
-}
+  wsContainer := restful.NewContainer()
+  m := MovieResource{}
+  m.Register(wsContainer)
 
-func populateMovies() {
-	session, err := mgo.Dial("localhost")
-	if err != nil {
-		panic(err)
-	}
-	defer session.Close()
-	c := session.DB("sleepy-movies").C("movies")
-  c.DropCollection()
-	c.Insert(Movie{
-		Title: "The Double",
-	})
-	c.Insert(Movie{
-		Title: "Ferngully",
-	})
-	c.Insert(Movie{
-		Title: "Clue",
-	})
+  log.Printf("start listening on localhost:8080")
+  server := &http.Server{Addr: ":8080", Handler: wsContainer}
+  log.Fatal(server.ListenAndServe())
 }
