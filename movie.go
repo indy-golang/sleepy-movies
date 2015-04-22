@@ -25,7 +25,7 @@ func (MovieResource) genre() *mgo.Collection {
 	if err != nil {
 		panic(err)
 	}
-	return session.DB("sleepy-movies").C("movies")
+	return session.DB("sleepy-movies").C("genre")
 }
 
 func (MovieResource) coll() *mgo.Collection {
@@ -74,9 +74,24 @@ func (u MovieResource) Register(container *restful.Container) {
 	container.Add(ws)
 }
 
+func (u MovieResource) getGenre(genreID string) (string, Genre) {
+  id := ""
+  var genre Genre
+  if len(genreID) == 24 {
+    if bsonID := bson.ObjectIdHex(genreID); bsonID.Valid() {
+      u.genre().FindId(bsonID).One(&genre)
+      id = genreID
+    }
+  }
+  return id, genre
+}
+
 func (u MovieResource) findMany(request *restful.Request, response *restful.Response) {
 	var movies []Movie
 	u.coll().Find(nil).All(&movies)
+  for i, movie := range movies {
+    movies[i].GenreID, movies[i].Genre = u.getGenre(movie.GenreID)
+  }
 	response.WriteEntity(movies)
 }
 
@@ -85,12 +100,12 @@ func (u MovieResource) findMany(request *restful.Request, response *restful.Resp
 func (u MovieResource) findOne(request *restful.Request, response *restful.Response) {
 	var movie Movie
 	movieID := bson.ObjectIdHex(request.PathParameter("movie-id"))
-
 	if u.coll().FindId(movieID).One(&movie) != nil {
 		response.AddHeader("Content-Type", "text/plain")
 		response.WriteErrorString(http.StatusNotFound, "404: Movie could not be found.")
 		return
 	}
+  movie.GenreID, movie.Genre = u.getGenre(movie.GenreID)
 	response.WriteEntity(movie)
 }
 
@@ -107,18 +122,7 @@ func (u *MovieResource) create(request *restful.Request, response *restful.Respo
 	if !movie.ID.Valid() {
 		movie.ID = bson.NewObjectId()
 	}
-	if len(movie.GenreID) == 24 {
-		genreID := bson.ObjectIdHex(movie.GenreID)
-		if !genreID.Valid() {
-			movie.GenreID = ""
-			movie.Genre = Genre{}
-		} else {
-			u.genre().FindId(genreID).One(&movie.Genre)
-		}
-	} else {
-		movie.GenreID = ""
-		movie.Genre = Genre{}
-	}
+  movie.GenreID, movie.Genre = u.getGenre(movie.GenreID)
 	if err := u.coll().Insert(movie); err != nil {
 		response.AddHeader("Content-Type", "text/plain")
 		response.WriteErrorString(http.StatusInternalServerError, err.Error())
@@ -141,6 +145,7 @@ func (u *MovieResource) update(request *restful.Request, response *restful.Respo
 	if !movie.ID.Valid() {
 		movie.ID = bson.ObjectIdHex(request.PathParameter("movie-id"))
 	}
+  movie.GenreID, movie.Genre = u.getGenre(movie.GenreID)
 	if _, err := u.coll().UpsertId(movie.ID, movie); err != nil {
 		response.AddHeader("Content-Type", "text/plain")
 		response.WriteErrorString(http.StatusInternalServerError, err.Error())

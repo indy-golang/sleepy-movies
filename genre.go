@@ -20,7 +20,7 @@ func (GenreResource) coll() *mgo.Collection {
 	if err != nil {
 		panic(err)
 	}
-	return session.DB("sleepy-movies").C("genres")
+	return session.DB("sleepy-movies").C("genre")
 }
 
 func (u GenreResource) Register(container *restful.Container) {
