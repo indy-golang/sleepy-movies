@@ -1,10 +1,10 @@
 Implementation of the following API for Indy Golang
 
-- [ ] __GET /movies__ Returns all movies. Movies have Title, Genre, Release Year, Description, Cast.
-- [ ] __POST /movies__ Creates a new movie.
-- [ ] __GET /movies/:id__ Returns specified movie.
-- [ ] __PUT /movies/:id__ Create/update a movie with the given ID.
-- [ ] __DELETE /movies/:id__ Removes a movie by ID.
+- [x] __GET /movies__ Returns all movies. Movies have Title, Genre, Release Year, Description, Cast.
+- [x] __POST /movies__ Creates a new movie.
+- [x] __GET /movies/:id__ Returns specified movie.
+- [x] __PUT /movies/:id__ Create/update a movie with the given ID.
+- [x] __DELETE /movies/:id__ Removes a movie by ID.
 - [ ] __GET /genres__ Returns all genres. Genres have Name.
 - [ ] __POST /genres__ Creates a new genre.
 - [ ] __GET /genres/:id__ Returns specified genre.
