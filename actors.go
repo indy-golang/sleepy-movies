@@ -23,6 +23,14 @@ func (ActorResource) coll() *mgo.Collection {
   return session.DB("sleepy-movies").C("actors")
 }
 
+func (ActorResource) movies() *mgo.Collection {
+  session, err := mgo.Dial("localhost")
+  if err != nil {
+    panic(err)
+  }
+  return session.DB("sleepy-movies").C("movies")
+}
+
 func (u ActorResource) Register(container *restful.Container) {
   ws := new(restful.WebService)
   ws.Path("/actors").
@@ -36,10 +44,16 @@ func (u ActorResource) Register(container *restful.Container) {
     Writes([]Actor{}))
 
   ws.Route(ws.GET("/{actor-id}").To(u.findOne).
-    Doc("get a actor").
+    Doc("get an actor").
     Operation("findOne").
     Param(ws.PathParameter("actor-id", "identifier of the actor").DataType("string")).
     Writes(Actor{}))
+
+  ws.Route(ws.GET("/{actor-id}/movies").To(u.findMovies).
+    Doc("get movies this actor has appeared in").
+    Operation("findMovies").
+    Param(ws.PathParameter("actor-id", "identifier of the actor").DataType("string")).
+    Writes([]Movie{}))
 
   ws.Route(ws.PUT("/{actor-id}").To(u.update).
     Doc("update a actor").
@@ -79,6 +93,26 @@ func (u ActorResource) findOne(request *restful.Request, response *restful.Respo
     return
   }
   response.WriteEntity(actor)
+}
+
+// GET http://localhost:8080/actors/1/movies
+//
+func (u ActorResource) findMovies(request *restful.Request, response *restful.Response) {
+  var actor Actor
+  actorID := bson.ObjectIdHex(request.PathParameter("actor-id"))
+
+  if u.coll().FindId(actorID).One(&actor) != nil {
+    response.AddHeader("Content-Type", "text/plain")
+    response.WriteErrorString(http.StatusNotFound, "404: Actor could not be found.")
+    return
+  }
+  var movies []Movie
+  if err := u.movies().Find(bson.M{"castids": bson.M{"$in": []string{actor.ID.Hex()}}}).All(&movies); err != nil {
+    response.AddHeader("Content-Type", "text/plain")
+    response.WriteErrorString(http.StatusInternalServerError, err.Error())
+    return
+  }
+  response.WriteEntity(movies)
 }
 
 // POST http://localhost:8080/actors

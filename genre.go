@@ -23,9 +23,17 @@ func (GenreResource) coll() *mgo.Collection {
 	return session.DB("sleepy-movies").C("genre")
 }
 
+func (GenreResource) movies() *mgo.Collection {
+  session, err := mgo.Dial("localhost")
+  if err != nil {
+    panic(err)
+  }
+  return session.DB("sleepy-movies").C("movies")
+}
+
 func (u GenreResource) Register(container *restful.Container) {
 	ws := new(restful.WebService)
-	ws.Path("/genres").
+	ws.Path("/genre").
 		Doc("Manage Genres").
 		Consumes(restful.MIME_XML, restful.MIME_JSON).
 		Produces(restful.MIME_JSON, restful.MIME_XML)
@@ -40,6 +48,12 @@ func (u GenreResource) Register(container *restful.Container) {
 		Operation("findOne").
 		Param(ws.PathParameter("genre-id", "identifier of the genre").DataType("string")).
 		Writes(Genre{}))
+
+	ws.Route(ws.GET("/{genre-id}/movies").To(u.findMovies).
+		Doc("get movies in this genre").
+		Operation("findMovies").
+		Param(ws.PathParameter("genre-id", "identifier of the genre").DataType("string")).
+		Writes([]Movie{}))
 
 	ws.Route(ws.PUT("/{genre-id}").To(u.update).
 		Doc("update a genre").
@@ -79,6 +93,26 @@ func (u GenreResource) findOne(request *restful.Request, response *restful.Respo
 		return
 	}
 	response.WriteEntity(genre)
+}
+
+// GET http://localhost:8080/genre/1/movies
+//
+func (u GenreResource) findMovies(request *restful.Request, response *restful.Response) {
+	var genre Genre
+	genreID := bson.ObjectIdHex(request.PathParameter("genre-id"))
+
+	if u.coll().FindId(genreID).One(&genre) != nil {
+		response.AddHeader("Content-Type", "text/plain")
+		response.WriteErrorString(http.StatusNotFound, "404: Genre could not be found.")
+		return
+	}
+  var movies []Movie
+  if err := u.movies().Find(bson.M{"genreid": genre.ID.Hex()}).All(&movies); err != nil {
+    response.AddHeader("Content-Type", "text/plain")
+    response.WriteErrorString(http.StatusInternalServerError, err.Error())
+    return
+  }
+  response.WriteEntity(movies)
 }
 
 // POST http://localhost:8080/genres
