@@ -97,17 +97,17 @@ func (u MovieResource) getGenre(genreID string) (string, Genre) {
 
 func (u MovieResource) getCast(castIDs []string) ([]string, []Actor) {
   var ids []string
-  var actors []Actor
+  var actorIDs []bson.ObjectId
   for _, actorID := range castIDs {
   	if len(actorID) == 24 {
 	    if bsonID := bson.ObjectIdHex(actorID); bsonID.Valid() {
-	    	var actor Actor
-	      u.actors().FindId(bsonID).One(&actor)
-	      actors = append(actors, actor)
+	    	actorIDs = append(actorIDs, bsonID)
 	      ids = append(ids, actorID)
 	    }
   	}
   }
+  var actors []Actor
+  u.actors().Find(bson.M{"_id": bson.M{"$in": actorIDs}}).All(&actors)
   return ids, actors
 }
 
