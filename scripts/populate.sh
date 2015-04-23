@@ -18,8 +18,6 @@ bridgesId=${bridges:9:-2}
 goldblumId=${goldblum:9:-2}
 garlinId=${garlin:9:-2}
 
-set -x
-
 # create movies
 curl -X POST -H 'Content-type: application/xml'  -d "<Movie><Title>Air Bud</Title><Released>August 1, 1997</Released><Description>Kid invents magic dog, terrorizes classmates.</Description><GenreID>$familyId</GenreID><CastIDs><CastID>$bridgesId</CastID><CastID>$goldblumId</CastID></CastIDs></Movie>" http://localhost:8080/movies
 curl -X POST -H 'Content-type: application/xml'  -d "<Movie><Title>The Double</Title><Released>April 4, 2014</Released><Description>Sad guy from Facebook movie makes you feel depressed.</Description><GenreID>$romcomId</GenreID><CastIDs><CastID>$garlinId</CastID><CastID>$goldblumId</CastID></CastIDs></Movie>" http://localhost:8080/movies
