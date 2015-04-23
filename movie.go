@@ -14,7 +14,8 @@ type Movie struct {
 	Genre       Genre `bson:"-"`
 	Released    string
 	Description string
-	Cast        []string
+	Cast        []Actor `bson:"-"`
+	CastIDs     []string `xml:"CastIDs>CastID"`
 }
 
 type MovieResource struct { /* empty */
@@ -26,6 +27,14 @@ func (MovieResource) genre() *mgo.Collection {
 		panic(err)
 	}
 	return session.DB("sleepy-movies").C("genre")
+}
+
+func (MovieResource) actors() *mgo.Collection {
+	session, err := mgo.Dial("localhost")
+	if err != nil {
+		panic(err)
+	}
+	return session.DB("sleepy-movies").C("actors")
 }
 
 func (MovieResource) coll() *mgo.Collection {
@@ -86,11 +95,28 @@ func (u MovieResource) getGenre(genreID string) (string, Genre) {
   return id, genre
 }
 
+func (u MovieResource) getCast(castIDs []string) ([]string, []Actor) {
+  var ids []string
+  var actors []Actor
+  for _, actorID := range castIDs {
+  	if len(actorID) == 24 {
+	    if bsonID := bson.ObjectIdHex(actorID); bsonID.Valid() {
+	    	var actor Actor
+	      u.actors().FindId(bsonID).One(&actor)
+	      actors = append(actors, actor)
+	      ids = append(ids, actorID)
+	    }
+  	}
+  }
+  return ids, actors
+}
+
 func (u MovieResource) findMany(request *restful.Request, response *restful.Response) {
 	var movies []Movie
 	u.coll().Find(nil).All(&movies)
   for i, movie := range movies {
     movies[i].GenreID, movies[i].Genre = u.getGenre(movie.GenreID)
+  	movies[i].CastIDs, movies[i].Cast = u.getCast(movie.CastIDs)
   }
 	response.WriteEntity(movies)
 }
@@ -106,11 +132,12 @@ func (u MovieResource) findOne(request *restful.Request, response *restful.Respo
 		return
 	}
   movie.GenreID, movie.Genre = u.getGenre(movie.GenreID)
+  movie.CastIDs, movie.Cast = u.getCast(movie.CastIDs)
 	response.WriteEntity(movie)
 }
 
 // POST http://localhost:8080/movies
-// <User><Name>Melissa</Name></User>
+// <Movie><Title>Melissa</Title></Movie>
 //
 func (u *MovieResource) create(request *restful.Request, response *restful.Response) {
 	movie := new(Movie)
@@ -123,9 +150,10 @@ func (u *MovieResource) create(request *restful.Request, response *restful.Respo
 		movie.ID = bson.NewObjectId()
 	}
   movie.GenreID, movie.Genre = u.getGenre(movie.GenreID)
+  movie.CastIDs, movie.Cast = u.getCast(movie.CastIDs)
 	if err := u.coll().Insert(movie); err != nil {
 		response.AddHeader("Content-Type", "text/plain")
-		response.WriteErrorString(http.StatusInternalServerError, err.Error())
+		response.WriteErrorString(http.StatusInternalServerError, err.Error() + "\n")
 		return
 	}
 
@@ -134,7 +162,7 @@ func (u *MovieResource) create(request *restful.Request, response *restful.Respo
 }
 
 // PUT http://localhost:8080/movies/1
-// <User><Id>1</Id><Name>Melissa Raspberry</Name></User>
+// <Movie><Id>1</Id><Title>Melissa Raspberry</Title></Movie>
 func (u *MovieResource) update(request *restful.Request, response *restful.Response) {
 	movie := new(Movie)
 	if err := request.ReadEntity(movie); err != nil {
@@ -146,6 +174,7 @@ func (u *MovieResource) update(request *restful.Request, response *restful.Respo
 		movie.ID = bson.ObjectIdHex(request.PathParameter("movie-id"))
 	}
   movie.GenreID, movie.Genre = u.getGenre(movie.GenreID)
+  movie.CastIDs, movie.Cast = u.getCast(movie.CastIDs)
 	if _, err := u.coll().UpsertId(movie.ID, movie); err != nil {
 		response.AddHeader("Content-Type", "text/plain")
 		response.WriteErrorString(http.StatusInternalServerError, err.Error())
